@@ -87,12 +87,6 @@ inline std::pair<std::string, std::string> read_key_value(std::vector<char>::ite
 	return {key, value};
 }
 
-// inline std::pair<std::string, std::string> read_key_value(std::ifstream& ifs, std::uint32_t
-// length) { 	std::vector<char> content(length); 	ifs.read(content.data(), content.size()); 	auto
-// begin
-//= content.begin(); 	return read_key_value(begin, length);
-//}
-
 inline std::string get_chunk_name(std::vector<char>::iterator& begin) {
 	auto ret = read_string(begin, 4);
 	return ret;
