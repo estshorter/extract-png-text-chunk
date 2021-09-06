@@ -30,6 +30,15 @@ std::vector<char> read_img_c(const std::string& filename) {
 	return img;
 }
 
+void write_img(const std::string& filename, std::vector<unsigned char>& img) {
+	std::ofstream ofs(filename, std::ios::out | std::ios::binary | std::ios::trunc);
+	if (ofs.fail()) {
+		throw std::runtime_error("failed to open an output file");
+	}
+	ofs.write(reinterpret_cast<char*>(img.data()), img.size());
+	ofs.close();
+}
+
 int main(void) {
 	using namespace png_text_chunk;
 	// auto inserted_opt = insert_texts<char>("orbit.png", kvs);
@@ -43,26 +52,10 @@ int main(void) {
 	}
 
 	constexpr auto filename_out = "inserted.png";
-	std::ofstream ofs(filename_out, std::ios::out | std::ios::binary | std::ios::trunc);
-	if (ofs.fail()) {
-		std::cerr << "failed to open an output file" << std::endl;
-		return -1;
-	}
-	auto& inserted = inserted_opt.value();
-	ofs.write(reinterpret_cast<char*>(inserted.data()), inserted.size());
-	ofs.close();
-
-	std::ifstream ifs(filename_out, std::ios::in | std::ios::binary);
-	if (ifs.fail()) {
-		std::cerr << "failed to open an input file" << std::endl;
-		return -1;
-	}
-	std::vector<char> img(inserted.size());
-	ifs.read(reinterpret_cast<char*>(img.data()), inserted.size());
-	ifs.close();
-
+	write_img(filename_out, inserted_opt.value());
+	auto img_inserted = read_img_c(filename_out);
 	std::cout << "Extracted texts: " << std::endl;
-	auto ret = extract_text_chunks(img);
+	auto ret = extract_text_chunks(img_inserted);
 	// auto img = extract_text_chunks(filename_out);
 
 	for (auto& [key, value] : ret) {
