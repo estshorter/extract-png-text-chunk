@@ -146,7 +146,7 @@ inline void skip_content(std::ifstream& ifs, std::uint32_t length) {
 }
 
 template <typename T, std::enable_if_t<is_char_v<T>, std::nullptr_t> = nullptr>
-inline std::pair<std::string, std::string> read_text(typename std::vector<T>::const_iterator& begin,
+inline std::pair<std::string, std::string> read_text_chunk(typename std::vector<T>::const_iterator& begin,
 													 std::uint32_t length) {
 	// tEXt を含めてCRC計算
 	std::uint32_t crc_calculated = CRC::Calculate(&(*(begin - 4)), length + 4, CRC::CRC_32());
@@ -160,7 +160,7 @@ inline std::pair<std::string, std::string> read_text(typename std::vector<T>::co
 	return {key, value};
 }
 
-inline std::pair<std::string, std::string> read_text(std::ifstream& ifs, std::uint32_t length) {
+inline std::pair<std::string, std::string> read_text_chunk(std::ifstream& ifs, std::uint32_t length) {
 	constexpr auto size_tEXt = 4;
 	constexpr auto size_crc = 4;
 
@@ -295,7 +295,7 @@ std::vector<KV> extract_text_chunks(const std::string& filename, bool validity_c
 		auto [name, length] = get_name_size(ifs);
 		// std::cout << "chunk: " << name << ", len: " << length << std::endl;
 		if (name == "tEXt") {
-			auto [key, value] = read_text(ifs, length);
+			auto [key, value] = read_text_chunk(ifs, length);
 			// std::cout << " - key: " << key << ", value: " << value << std::endl;
 			ret.push_back({std::move(key), std::move(value)});
 		} else if (name == "IEND") {
@@ -320,7 +320,7 @@ std::vector<KV> extract_text_chunks(const std::vector<T>& img, bool validity_che
 		auto [name, length] = get_name_size<T>(begin);
 		// std::cout << "chunk: " << name << ", len: " << length << std::endl;
 		if (name == "tEXt") {
-			auto [key, value] = read_text<T>(begin, length);
+			auto [key, value] = read_text_chunk<T>(begin, length);
 			// std::cout << " - key: " << key << ", value: " << value << std::endl;
 			ret.push_back({std::move(key), std::move(value)});
 		} else if (name == "IEND") {
