@@ -149,7 +149,7 @@ template <typename T, std::enable_if_t<is_char_v<T>, std::nullptr_t> = nullptr>
 inline std::pair<std::string, std::string> read_text(typename std::vector<T>::const_iterator& begin,
 													 std::uint32_t length) {
 	// tEXt を含めてCRC計算
-	std::uint32_t crc_calculated = CRC::Calculate(&(begin - 4), length + 4, CRC::CRC_32());
+	std::uint32_t crc_calculated = CRC::Calculate(&(*(begin - 4)), length + 4, CRC::CRC_32());
 	auto [key, value] = read_key_value<T>(begin, length);
 	std::uint32_t crc = swap_endian(begin);
 	if (crc != crc_calculated) {

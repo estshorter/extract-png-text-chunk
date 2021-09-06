@@ -4,7 +4,7 @@
 int main(void) {
 	using namespace png_text_chunk;
 	std::vector<KV> kvs = {{"original width", "1920"}, {"original height", "1200"}};
-	auto inserted_opt = insert_texts<unsigned char>("orbit.png", kvs);
+	auto inserted_opt = insert_texts<char>("orbit.png", kvs);
 	if (!inserted_opt.has_value()) {
 		std::cerr << "failed to insert" << std::endl;
 		return -1;
@@ -28,7 +28,7 @@ int main(void) {
 		std::cerr << "failed to open an input file" << std::endl;
 		return -1;
 	}
-	std::vector<unsigned char> img(inserted.size());
+	std::vector<char> img(inserted.size());
 	ifs.read(reinterpret_cast<char*>(img.data()), inserted.size());
 	ifs.close();
 	auto ret = extract_text_chunk(img);
