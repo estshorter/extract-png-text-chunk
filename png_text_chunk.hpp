@@ -189,7 +189,7 @@ inline std::pair<std::string, std::string> read_text(std::ifstream& ifs, std::ui
 }
 
 template <typename T, std::enable_if_t<is_char_v<T>, std::nullptr_t> = nullptr>
-std::vector<T> gen_text_chunk(const std::string& key_ascii, const std::string& val_ascii) {
+std::vector<T> generate_text_chunk(const std::string& key_ascii, const std::string& val_ascii) {
 	std::uint32_t length = static_cast<uint32_t>(key_ascii.size() + 1 + val_ascii.size());
 	std::uint32_t length_swapped = swap_endian(length);
 
@@ -219,9 +219,9 @@ std::vector<T> gen_text_chunk(const std::string& key_ascii, const std::string& v
 }
 
 template <typename T, std::enable_if_t<is_char_v<T>, std::nullptr_t> = nullptr>
-void insert_text(std::vector<T>& img, typename std::vector<T>::const_iterator& begin,
+void insert_text_chunk(std::vector<T>& img, typename std::vector<T>::const_iterator& begin,
 				 const std::string& key_ascii, const std::string& val_ascii) {
-	auto text = gen_text_chunk<T>(key_ascii, val_ascii);
+	auto text = generate_text_chunk<T>(key_ascii, val_ascii);
 	auto size = text.size();
 	begin = img.insert(begin, std::make_move_iterator(text.begin()),
 					   std::make_move_iterator(text.end()));
@@ -229,7 +229,7 @@ void insert_text(std::vector<T>& img, typename std::vector<T>::const_iterator& b
 }
 
 template <typename T, std::enable_if_t<is_char_v<T>, std::nullptr_t> = nullptr>
-std::optional<std::vector<T>> insert_texts(std::vector<T>& img_data, const std::vector<KV>& kvs,
+std::optional<std::vector<T>> insert_text_chunks(std::vector<T>& img_data, const std::vector<KV>& kvs,
 										   bool validity_check = true) {
 	if (validity_check && !is_valid_png(img_data)) {
 		throw std::runtime_error("png signature not found");
@@ -242,7 +242,7 @@ std::optional<std::vector<T>> insert_texts(std::vector<T>& img_data, const std::
 		if (name == "IHDR") {
 			skip_content<T>(begin, length);
 			for (auto& [k, v] : kvs) {
-				insert_text(img_data, begin, k, v);
+				insert_text_chunk(img_data, begin, k, v);
 				// std::cout << "insert: key: " << k << ", value: " << v << std::endl;
 			}
 			return img_data;
@@ -252,7 +252,7 @@ std::optional<std::vector<T>> insert_texts(std::vector<T>& img_data, const std::
 }
 
 template <typename T, std::enable_if_t<is_char_v<T>, std::nullptr_t> = nullptr>
-std::optional<std::vector<T>> insert_texts(std::ifstream& ifs, const std::vector<KV>& kvs,
+std::optional<std::vector<T>> insert_text_chunks(std::ifstream& ifs, const std::vector<KV>& kvs,
 										   bool validity_check = true) {
 	if (validity_check && !is_valid_png(ifs)) {
 		throw std::runtime_error("png signature not found");
@@ -264,18 +264,18 @@ std::optional<std::vector<T>> insert_texts(std::ifstream& ifs, const std::vector
 	std::vector<T> img_data(img_size);
 	ifs.read(reinterpret_cast<char*>(img_data.data()), img_size);
 	// std::cout << "size = " << img_size << "\n";
-	return insert_texts<T>(img_data, kvs, false);
+	return insert_text_chunks<T>(img_data, kvs, false);
 }
 
 template <typename T = char, std::enable_if_t<is_char_v<T>, std::nullptr_t> = nullptr>
-inline std::optional<std::vector<T>> insert_texts(const std::string& filename,
+inline std::optional<std::vector<T>> insert_text_chunks(const std::string& filename,
 												  const std::vector<KV>& kvs) {
 	std::ifstream ifs;
 	ifs.open(filename, std::ios::out | std::ios::binary);
 	if (ifs.fail()) {
 		throw std::runtime_error("cannot open a file");
 	}
-	return insert_texts<T>(ifs, kvs);
+	return insert_text_chunks<T>(ifs, kvs);
 }
 
 std::vector<KV> extract_text_chunks(const std::string& filename, bool validity_check = true) {

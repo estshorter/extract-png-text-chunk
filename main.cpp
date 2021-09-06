@@ -46,8 +46,8 @@ int main(void) {
 
 	auto img_in = read_img_uc(filename_in);
 
-	// auto inserted_opt = insert_texts<char>(filename_in, kvs);
-	auto inserted_opt = insert_texts(img_in, kvs);
+	// auto inserted_opt = insert_text_chunks<char>(filename_in, kvs);
+	auto inserted_opt = insert_text_chunks(img_in, kvs);
 	if (!inserted_opt.has_value()) {
 		std::cerr << "failed to insert" << std::endl;
 		return -1;
