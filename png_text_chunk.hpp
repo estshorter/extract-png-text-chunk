@@ -38,7 +38,7 @@ inline std::uint32_t swap_endian(Iter begin) {
 
 bool is_valid_png(std::ifstream& ifs) {
 	constexpr auto PNG_SIG = "\x89PNG\r\n\x1a\n";
-	std::array<char, sizeof(PNG_SIG)> sig;
+	std::array<char, sizeof(PNG_SIG)> sig{};
 
 	ifs.seekg(0);
 	ifs.read(sig.data(), sig.size());
@@ -71,7 +71,7 @@ inline std::uint32_t get_size(typename std::vector<T>::const_iterator& begin) {
 }
 
 inline std::uint32_t get_size(std::ifstream& ifs) {
-	std::array<char, 4> length;
+	std::array<char, 4> length{};
 	ifs.read(length.data(), length.size());
 
 	std::uint32_t ret = swap_endian(length.begin());
