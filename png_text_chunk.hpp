@@ -63,14 +63,14 @@ bool is_valid_png(const std::vector<T>& img) {
 }
 
 template <typename T, std::enable_if_t<is_char_v<T>, std::nullptr_t> = nullptr>
-inline std::uint32_t get_size(typename std::vector<T>::const_iterator& begin) {
+inline std::uint32_t read_size(typename std::vector<T>::const_iterator& begin) {
 	auto length = swap_endian(begin);
 
 	begin += 4;
 	return length;
 }
 
-inline std::uint32_t get_size(std::ifstream& ifs) {
+inline std::uint32_t read_size(std::ifstream& ifs) {
 	std::array<char, 4> length{};
 	ifs.read(length.data(), length.size());
 
@@ -112,27 +112,27 @@ inline std::pair<std::string, std::string> read_key_value(
 }
 
 template <typename T, std::enable_if_t<is_char_v<T>, std::nullptr_t> = nullptr>
-inline std::string get_chunk_name(typename std::vector<T>::const_iterator& begin) {
+inline std::string read_chunk_name(typename std::vector<T>::const_iterator& begin) {
 	auto ret = read_string<T>(begin, 4);
 	return ret;
 }
 
-inline std::string get_chunk_name(std::ifstream& ifs) {
+inline std::string read_chunk_name(std::ifstream& ifs) {
 	auto ret = read_string(ifs, 4);
 	return ret;
 }
 
 template <typename T>
-inline std::pair<std::string, std::uint32_t> get_name_size(
+inline std::pair<std::string, std::uint32_t> read_chunk_name_size(
 	typename std::vector<T>::const_iterator& begin) {
-	auto length = get_size<T>(begin);
-	auto name = get_chunk_name<T>(begin);
+	auto length = read_size<T>(begin);
+	auto name = read_chunk_name<T>(begin);
 	return {name, length};
 }
 
-inline std::pair<std::string, std::uint32_t> get_name_size(std::ifstream& ifs) {
-	auto length = get_size(ifs);
-	auto name = get_chunk_name(ifs);
+inline std::pair<std::string, std::uint32_t> read_chunk_name_size(std::ifstream& ifs) {
+	auto length = read_size(ifs);
+	auto name = read_chunk_name(ifs);
 	return {name, length};
 }
 
@@ -237,7 +237,7 @@ std::optional<std::vector<T>> insert_text_chunks(std::vector<T>& img_data, const
 
 	auto begin = img_data.begin() + 8;
 	while (begin != img_data.end()) {
-		auto [name, length] = get_name_size<T>(begin);
+		auto [name, length] = read_chunk_name_size<T>(begin);
 		// std::cout << "chunk: " << name << ", len: " << length << std::endl;
 		if (name == "IHDR") {
 			skip_content<T>(begin, length);
@@ -292,7 +292,7 @@ std::vector<KV> extract_text_chunks(const std::string& filename, bool validity_c
 
 	ifs.seekg(8);
 	while (!ifs.eof()) {
-		auto [name, length] = get_name_size(ifs);
+		auto [name, length] = read_chunk_name_size(ifs);
 		// std::cout << "chunk: " << name << ", len: " << length << std::endl;
 		if (name == "tEXt") {
 			auto [key, value] = read_text_chunk(ifs, length);
@@ -317,7 +317,7 @@ std::vector<KV> extract_text_chunks(const std::vector<T>& img, bool validity_che
 
 	auto begin = img.begin() + 8;
 	while (begin != img.end()) {
-		auto [name, length] = get_name_size<T>(begin);
+		auto [name, length] = read_chunk_name_size<T>(begin);
 		// std::cout << "chunk: " << name << ", len: " << length << std::endl;
 		if (name == "tEXt") {
 			auto [key, value] = read_text_chunk<T>(begin, length);
