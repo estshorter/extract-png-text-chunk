@@ -4,26 +4,35 @@
 int main(void) {
 	using namespace png_text_chunk;
 	std::vector<KV> kvs = {{"original width", "1920"}, {"original height", "1200"}};
-	auto inserted_opt = insert_texts("orbit.png", kvs);
+	auto inserted_opt = insert_texts<unsigned char>("orbit.png", kvs);
 	if (!inserted_opt.has_value()) {
 		std::cerr << "failed to insert" << std::endl;
 		return -1;
 	}
 
-	std::ofstream ofs;
 	constexpr auto filename_out = "inserted.png";
-	ofs.open(filename_out, std::ios::out | std::ios::binary | std::ios::trunc);
+	std::ofstream ofs(filename_out, std::ios::out | std::ios::binary | std::ios::trunc);
 	if (ofs.fail()) {
 		std::cerr << "failed to open an output file" << std::endl;
 		return -1;
 	}
 	auto inserted = inserted_opt.value();
-	ofs.write(inserted.data(), inserted.size());
+	ofs.write(reinterpret_cast<char*>(inserted.data()), inserted.size());
+	ofs.flush();
 	ofs.close();
 
 	std::cout << std::endl << "--------------" << std::endl << std::endl;
 
-	auto ret = extract_text_chunk(filename_out);
+	std::ifstream ifs(filename_out, std::ios::in | std::ios::binary);
+	if (ifs.fail()) {
+		std::cerr << "failed to open an input file" << std::endl;
+		return -1;
+	}
+	std::vector<unsigned char> img(inserted.size());
+	ifs.read(reinterpret_cast<char*>(img.data()), inserted.size());
+	ifs.close();
+	auto ret = extract_text_chunk(img);
+	//auto img = extract_text_chunk(filename_out);
 	
 	std::cout << std::endl << "--------------" << std::endl << std::endl;
 
