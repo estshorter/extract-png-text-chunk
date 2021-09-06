@@ -41,10 +41,12 @@ void write_img(const std::string& filename, std::vector<unsigned char>& img) {
 
 int main(void) {
 	using namespace png_text_chunk;
-	// auto inserted_opt = insert_texts<char>("orbit.png", kvs);
-	auto img_in = read_img_uc("orbit.png");
+	constexpr auto filename_in = "orbit.png";
+	const std::vector<KV> kvs = {{"original width", "1920"}, {"original height", "1200"}};
 
-	std::vector<KV> kvs = {{"original width", "1920"}, {"original height", "1200"}};
+	auto img_in = read_img_uc(filename_in);
+
+	// auto inserted_opt = insert_texts<char>(filename_in, kvs);
 	auto inserted_opt = insert_texts(img_in, kvs);
 	if (!inserted_opt.has_value()) {
 		std::cerr << "failed to insert" << std::endl;
@@ -54,10 +56,10 @@ int main(void) {
 	constexpr auto filename_out = "inserted.png";
 	write_img(filename_out, inserted_opt.value());
 	auto img_inserted = read_img_c(filename_out);
-	std::cout << "Extracted texts: " << std::endl;
+	// auto img_inserted = extract_text_chunks(filename_out);
 	auto ret = extract_text_chunks(img_inserted);
-	// auto img = extract_text_chunks(filename_out);
 
+	std::cout << "Extracted texts: " << std::endl;
 	for (auto& [key, value] : ret) {
 		std::cout << " - key: " << key << ", value: " << value << std::endl;
 	}
