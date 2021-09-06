@@ -276,7 +276,7 @@ inline std::optional<std::vector<T>> insert_texts(const std::string& filename,
 	return insert_texts<T>(ifs, kvs);
 }
 
-std::vector<KV> extract_text_chunk(const std::string& filename, bool validity_check = true) {
+std::vector<KV> extract_text_chunks(const std::string& filename, bool validity_check = true) {
 	std::ifstream ifs;
 	ifs.open(filename, std::ios::out | std::ios::binary);
 	if (ifs.fail()) {
@@ -306,7 +306,7 @@ std::vector<KV> extract_text_chunk(const std::string& filename, bool validity_ch
 }
 
 template <typename T = char, std::enable_if_t<is_char_v<T>, std::nullptr_t> = nullptr>
-std::vector<KV> extract_text_chunk(const std::vector<T>& img, bool validity_check = true) {
+std::vector<KV> extract_text_chunks(const std::vector<T>& img, bool validity_check = true) {
 	if (validity_check && !is_valid_png<T>(img)) {
 		throw std::runtime_error("png signature not found");
 	};

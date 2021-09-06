@@ -31,8 +31,8 @@ int main(void) {
 	std::vector<char> img(inserted.size());
 	ifs.read(reinterpret_cast<char*>(img.data()), inserted.size());
 	ifs.close();
-	auto ret = extract_text_chunk(img);
-	//auto img = extract_text_chunk(filename_out);
+	auto ret = extract_text_chunks(img);
+	//auto img = extract_text_chunks(filename_out);
 	
 	std::cout << std::endl << "--------------" << std::endl << std::endl;
 
