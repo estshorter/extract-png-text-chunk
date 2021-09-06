@@ -153,8 +153,8 @@ inline std::pair<std::string, std::string> read_text(typename std::vector<T>::co
 	auto [key, value] = read_key_value<T>(begin, length);
 	std::uint32_t crc = swap_endian(begin);
 	if (crc != crc_calculated) {
-		std::runtime_error("CRC doesn't match: from_data: " + std::to_string(crc_calculated) +
-						   ", actual: " + std::to_string(crc));
+		throw std::runtime_error("CRC doesn't match: from_data: " + std::to_string(crc_calculated) +
+								 ", actual: " + std::to_string(crc));
 	}
 	begin += 4;
 	return {key, value};
@@ -178,7 +178,8 @@ inline std::pair<std::string, std::string> read_text(std::ifstream& ifs, std::ui
 	auto crc = swap_endian(it);
 
 	if (crc != crc_calculated) {
-		std::runtime_error("CRC doesn't match: from_data: " + std::to_string(crc_calculated) + ", actual: " + std::to_string(crc));
+		throw std::runtime_error("CRC doesn't match: from_data: " + std::to_string(crc_calculated) +
+								 ", actual: " + std::to_string(crc));
 	}
 
 	auto begin = content.begin() + size_tEXt;
@@ -237,12 +238,12 @@ std::optional<std::vector<T>> insert_texts(std::vector<T>& img_data, const std::
 	auto begin = img_data.begin() + 8;
 	while (begin != img_data.end()) {
 		auto [name, length] = get_name_size<T>(begin);
-		//std::cout << "chunk: " << name << ", len: " << length << std::endl;
+		// std::cout << "chunk: " << name << ", len: " << length << std::endl;
 		if (name == "IHDR") {
 			skip_content<T>(begin, length);
 			for (auto& [k, v] : kvs) {
 				insert_text(img_data, begin, k, v);
-				//std::cout << "insert: key: " << k << ", value: " << v << std::endl;
+				// std::cout << "insert: key: " << k << ", value: " << v << std::endl;
 			}
 			return img_data;
 		}
@@ -262,7 +263,7 @@ std::optional<std::vector<T>> insert_texts(std::ifstream& ifs, const std::vector
 	ifs.seekg(0);
 	std::vector<T> img_data(img_size);
 	ifs.read(reinterpret_cast<char*>(img_data.data()), img_size);
-	//std::cout << "size = " << img_size << "\n";
+	// std::cout << "size = " << img_size << "\n";
 	return insert_texts<T>(img_data, kvs, false);
 }
 
@@ -292,10 +293,10 @@ std::vector<KV> extract_text_chunks(const std::string& filename, bool validity_c
 	ifs.seekg(8);
 	while (!ifs.eof()) {
 		auto [name, length] = get_name_size(ifs);
-		//std::cout << "chunk: " << name << ", len: " << length << std::endl;
+		// std::cout << "chunk: " << name << ", len: " << length << std::endl;
 		if (name == "tEXt") {
 			auto [key, value] = read_text(ifs, length);
-			//std::cout << " - key: " << key << ", value: " << value << std::endl;
+			// std::cout << " - key: " << key << ", value: " << value << std::endl;
 			ret.push_back({std::move(key), std::move(value)});
 		} else if (name == "IEND") {
 			break;
@@ -317,10 +318,10 @@ std::vector<KV> extract_text_chunks(const std::vector<T>& img, bool validity_che
 	auto begin = img.begin() + 8;
 	while (begin != img.end()) {
 		auto [name, length] = get_name_size<T>(begin);
-		//std::cout << "chunk: " << name << ", len: " << length << std::endl;
+		// std::cout << "chunk: " << name << ", len: " << length << std::endl;
 		if (name == "tEXt") {
 			auto [key, value] = read_text<T>(begin, length);
-			//std::cout << " - key: " << key << ", value: " << value << std::endl;
+			// std::cout << " - key: " << key << ", value: " << value << std::endl;
 			ret.push_back({std::move(key), std::move(value)});
 		} else if (name == "IEND") {
 			break;

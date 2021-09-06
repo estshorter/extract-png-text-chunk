@@ -1,4 +1,5 @@
 #include <iostream>
+
 #include "png_text_chunk.hpp"
 
 int main(void) {
@@ -16,12 +17,9 @@ int main(void) {
 		std::cerr << "failed to open an output file" << std::endl;
 		return -1;
 	}
-	auto inserted = inserted_opt.value();
+	auto& inserted = inserted_opt.value();
 	ofs.write(reinterpret_cast<char*>(inserted.data()), inserted.size());
-	ofs.flush();
 	ofs.close();
-
-	std::cout << std::endl << "--------------" << std::endl << std::endl;
 
 	std::ifstream ifs(filename_out, std::ios::in | std::ios::binary);
 	if (ifs.fail()) {
@@ -31,13 +29,13 @@ int main(void) {
 	std::vector<char> img(inserted.size());
 	ifs.read(reinterpret_cast<char*>(img.data()), inserted.size());
 	ifs.close();
+
+	std::cout << "Extracted texts: " << std::endl;
 	auto ret = extract_text_chunks(img);
-	//auto img = extract_text_chunks(filename_out);
-	
-	std::cout << std::endl << "--------------" << std::endl << std::endl;
+	// auto img = extract_text_chunks(filename_out);
 
 	for (auto& [key, value] : ret) {
-		std::cout << "key: " << key << ", value: " << value << std::endl;
+		std::cout << " - key: " << key << ", value: " << value << std::endl;
 	}
 	return 0;
 }
