@@ -153,7 +153,8 @@ inline std::pair<std::string, std::string> read_text(typename std::vector<T>::co
 	auto [key, value] = read_key_value<T>(begin, length);
 	std::uint32_t crc = swap_endian(begin);
 	if (crc != crc_calculated) {
-		std::cerr << "CRC doesn't match" << std::endl;
+		std::runtime_error("CRC doesn't match: from_data: " + std::to_string(crc_calculated) +
+						   ", actual: " + std::to_string(crc));
 	}
 	begin += 4;
 	return {key, value};
@@ -177,7 +178,7 @@ inline std::pair<std::string, std::string> read_text(std::ifstream& ifs, std::ui
 	auto crc = swap_endian(it);
 
 	if (crc != crc_calculated) {
-		std::cerr << "CRC doesn't match" << std::endl;
+		std::runtime_error("CRC doesn't match: from_data: " + std::to_string(crc_calculated) + ", actual: " + std::to_string(crc));
 	}
 
 	auto begin = content.begin() + size_tEXt;
