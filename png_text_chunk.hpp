@@ -1,5 +1,6 @@
 #pragma once
 
+#include <algorithm>
 #include <array>
 #include <fstream>
 #include <iostream>
@@ -42,7 +43,7 @@ bool is_valid_png(std::ifstream& ifs) {
 
 	ifs.seekg(0);
 	ifs.read(sig.data(), sig.size());
-	for (int i = 0; i < sig.size(); i++) {
+	for (size_t i = 0; i < sig.size(); i++) {
 		if (PNG_SIG[i] != sig[i]) {
 			return false;
 		}
@@ -146,8 +147,8 @@ inline void skip_content(std::ifstream& ifs, std::uint32_t length) {
 }
 
 template <typename T, std::enable_if_t<is_char_v<T>, std::nullptr_t> = nullptr>
-inline std::pair<std::string, std::string> read_text_chunk(typename std::vector<T>::const_iterator& begin,
-													 std::uint32_t length) {
+inline std::pair<std::string, std::string> read_text_chunk(
+	typename std::vector<T>::const_iterator& begin, std::uint32_t length) {
 	// tEXt を含めてCRC計算
 	std::uint32_t crc_calculated = CRC::Calculate(&(*(begin - 4)), length + 4, CRC::CRC_32());
 	auto [key, value] = read_key_value<T>(begin, length);
@@ -160,7 +161,8 @@ inline std::pair<std::string, std::string> read_text_chunk(typename std::vector<
 	return {key, value};
 }
 
-inline std::pair<std::string, std::string> read_text_chunk(std::ifstream& ifs, std::uint32_t length) {
+inline std::pair<std::string, std::string> read_text_chunk(std::ifstream& ifs,
+														   std::uint32_t length) {
 	constexpr auto size_tEXt = 4;
 	constexpr auto size_crc = 4;
 
@@ -182,7 +184,7 @@ inline std::pair<std::string, std::string> read_text_chunk(std::ifstream& ifs, s
 								 ", actual: " + std::to_string(crc));
 	}
 
-	auto begin = content.begin() + size_tEXt;
+	auto begin = content.cbegin() + size_tEXt;
 	auto [key, value] = read_key_value<char>(begin, length);
 
 	return {key, value};
@@ -220,7 +222,7 @@ std::vector<T> generate_text_chunk(const std::string& key_ascii, const std::stri
 
 template <typename T, std::enable_if_t<is_char_v<T>, std::nullptr_t> = nullptr>
 void insert_text_chunk(std::vector<T>& img, typename std::vector<T>::const_iterator& begin,
-				 const std::string& key_ascii, const std::string& val_ascii) {
+					   const std::string& key_ascii, const std::string& val_ascii) {
 	auto text = generate_text_chunk<T>(key_ascii, val_ascii);
 	auto size = text.size();
 	begin = img.insert(begin, std::make_move_iterator(text.begin()),
@@ -229,13 +231,14 @@ void insert_text_chunk(std::vector<T>& img, typename std::vector<T>::const_itera
 }
 
 template <typename T, std::enable_if_t<is_char_v<T>, std::nullptr_t> = nullptr>
-std::optional<std::vector<T>> insert_text_chunks(std::vector<T>& img_data, const std::vector<KV>& kvs,
-										   bool validity_check = true) {
+std::optional<std::vector<T>> insert_text_chunks(std::vector<T>& img_data,
+												 const std::vector<KV>& kvs,
+												 bool validity_check = true) {
 	if (validity_check && !is_valid_png(img_data)) {
 		throw std::runtime_error("png signature not found");
 	}
 
-	auto begin = img_data.begin() + 8;
+	auto begin = img_data.cbegin() + 8;
 	while (begin != img_data.end()) {
 		auto [name, length] = read_chunk_name_size<T>(begin);
 		// std::cout << "chunk: " << name << ", len: " << length << std::endl;
@@ -253,7 +256,7 @@ std::optional<std::vector<T>> insert_text_chunks(std::vector<T>& img_data, const
 
 template <typename T, std::enable_if_t<is_char_v<T>, std::nullptr_t> = nullptr>
 std::optional<std::vector<T>> insert_text_chunks(std::ifstream& ifs, const std::vector<KV>& kvs,
-										   bool validity_check = true) {
+												 bool validity_check = true) {
 	if (validity_check && !is_valid_png(ifs)) {
 		throw std::runtime_error("png signature not found");
 	}
@@ -269,7 +272,7 @@ std::optional<std::vector<T>> insert_text_chunks(std::ifstream& ifs, const std::
 
 template <typename T = char, std::enable_if_t<is_char_v<T>, std::nullptr_t> = nullptr>
 inline std::optional<std::vector<T>> insert_text_chunks(const std::string& filename,
-												  const std::vector<KV>& kvs) {
+														const std::vector<KV>& kvs) {
 	std::ifstream ifs;
 	ifs.open(filename, std::ios::out | std::ios::binary);
 	if (ifs.fail()) {
@@ -315,7 +318,7 @@ std::vector<KV> extract_text_chunks(const std::vector<T>& img, bool validity_che
 
 	std::vector<KV> ret;
 
-	auto begin = img.begin() + 8;
+	auto begin = img.cbegin() + 8;
 	while (begin != img.end()) {
 		auto [name, length] = read_chunk_name_size<T>(begin);
 		// std::cout << "chunk: " << name << ", len: " << length << std::endl;
