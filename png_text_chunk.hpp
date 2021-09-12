@@ -193,12 +193,18 @@ inline std::pair<std::string, std::string> read_text_chunk(std::ifstream& ifs,
 
 template <typename T, std::enable_if_t<is_char_v<T>, std::nullptr_t> = nullptr>
 std::vector<T> generate_text_chunk(const std::string& key_ascii, const std::string& val_ascii) {
+	constexpr auto size_length = 4;
+	constexpr auto size_type = 4;
+	constexpr auto size_crc = 4;
+
+	if (key_ascii.size() == 0 || key_ascii.size() >= 80) {
+		throw std::runtime_error("key size must be within 1~79");
+	}
 	std::uint32_t length = static_cast<uint32_t>(key_ascii.size() + 1 + val_ascii.size());
 	std::uint32_t length_swapped = swap_endian(length);
 
 	std::vector<T> ret;
-	ret.reserve(length + 12);
-
+	ret.reserve(length + size_length + size_type + size_crc);
 	T* len = reinterpret_cast<T*>(&length_swapped);
 	for (int i = 0; i < 4; i++) {
 		ret.push_back(len[i]);
@@ -206,12 +212,13 @@ std::vector<T> generate_text_chunk(const std::string& key_ascii, const std::stri
 	constexpr std::array<T, 4> itext = {'t', 'E', 'X', 't'};
 
 	std::vector<T> content;
+	content.reserve(length + size_type);
 	std::move(itext.begin(), itext.end(), std::back_inserter(content));
 	std::copy(key_ascii.begin(), key_ascii.end(), std::back_inserter(content));
 	content.push_back('\0');
 	std::copy(val_ascii.begin(), val_ascii.end(), std::back_inserter(content));
 
-	std::uint32_t crc = CRC::Calculate(content.data(), length + 4, CRC::CRC_32());
+	std::uint32_t crc = CRC::Calculate(content.data(), content.size(), CRC::CRC_32());
 	std::uint32_t crc_swapped = swap_endian(crc);
 	T* crc_ = reinterpret_cast<T*>(&crc_swapped);
 	std::move(content.begin(), content.end(), std::back_inserter(ret));
