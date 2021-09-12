@@ -101,16 +101,19 @@ template <typename T, std::enable_if_t<is_char_v<T>, std::nullptr_t> = nullptr>
 inline std::pair<std::string, std::string> read_key_value(
 	typename std::vector<T>::const_iterator& begin, std::uint32_t length) {
 	auto end = begin + length;
-	auto delim_r =
-		std::find(std::make_reverse_iterator(begin), std::make_reverse_iterator(end), '\0');
-	auto delim = (delim_r + 1).base();
-	if (delim == end) {
+
+	auto delim_first_null = std::find(begin, end, '\0');
+
+	auto begin_r = std::make_reverse_iterator(begin);
+	auto delim_r = std::find(std::make_reverse_iterator(end), begin_r, '\0');
+	if (delim_r == begin_r || delim_first_null == end) {
 		throw("null character is not found");
 	}
+	auto delim_last_null = begin + std::distance(delim_r, begin_r);
 
 	std::string key, value;
-	std::copy(begin, delim, std::back_inserter(key));
-	std::copy(delim + 1, end, std::back_inserter(value));
+	std::copy(begin, delim_first_null, std::back_inserter(key));
+	std::copy(delim_last_null, end, std::back_inserter(value));
 	begin = end;
 	return {key, value};
 }
@@ -227,9 +230,57 @@ std::vector<T> generate_text_chunk(const std::string& key_ascii, const std::stri
 }
 
 template <typename T, std::enable_if_t<is_char_v<T>, std::nullptr_t> = nullptr>
+std::vector<T> generate_itext_chunk(const std::string& key_ascii, const std::string& val_ascii) {
+	constexpr auto size_length = 4;
+	constexpr auto size_type = 4;
+	constexpr auto size_crc = 4;
+
+	if (key_ascii.size() == 0 || key_ascii.size() >= 80) {
+		throw std::runtime_error("key size must be within 1~79");
+	}
+	// Uncompressed, no-lang tag, no-trans tag
+	std::uint32_t length = static_cast<uint32_t>(key_ascii.size() + 5 + val_ascii.size());
+	std::uint32_t length_swapped = swap_endian(length);
+
+	std::vector<T> ret;
+	ret.reserve(length + size_length + size_type + size_crc);
+	T* len = reinterpret_cast<T*>(&length_swapped);
+	for (int i = 0; i < 4; i++) {
+		ret.push_back(len[i]);
+	}
+	constexpr std::array<T, 4> itext = {'i', 'T', 'X', 'T'};
+
+	std::vector<T> content;
+	content.reserve(length + size_type);
+	std::move(itext.begin(), itext.end(), std::back_inserter(content));
+	std::copy(key_ascii.begin(), key_ascii.end(), std::back_inserter(content));
+	content.push_back('\0');
+	content.push_back('\0');
+	content.push_back('\0');
+	content.push_back('\0');
+	content.push_back('\0');
+	std::copy(val_ascii.begin(), val_ascii.end(), std::back_inserter(content));
+
+	std::uint32_t crc = CRC::Calculate(content.data(), content.size(), CRC::CRC_32());
+	std::uint32_t crc_swapped = swap_endian(crc);
+	T* crc_ = reinterpret_cast<T*>(&crc_swapped);
+	std::move(content.begin(), content.end(), std::back_inserter(ret));
+	for (int i = 0; i < 4; i++) {
+		ret.push_back(crc_[i]);
+	}
+	return ret;
+}
+
+template <typename T, std::enable_if_t<is_char_v<T>, std::nullptr_t> = nullptr>
 void insert_text_chunk(std::vector<T>& img, typename std::vector<T>::const_iterator& begin,
-					   const std::string& key_ascii, const std::string& val_ascii) {
-	auto text = generate_text_chunk<T>(key_ascii, val_ascii);
+					   const std::string& key_ascii, const std::string& val_ascii,
+					   bool utf8 = false) {
+	std::vector<T> text;
+	if (utf8) {
+		text = generate_itext_chunk<T>(key_ascii, val_ascii);
+	} else {
+		text = generate_text_chunk<T>(key_ascii, val_ascii);
+	}
 	auto size = text.size();
 	begin = img.insert(begin, std::make_move_iterator(text.begin()),
 					   std::make_move_iterator(text.end()));
@@ -238,7 +289,7 @@ void insert_text_chunk(std::vector<T>& img, typename std::vector<T>::const_itera
 
 template <typename T, std::enable_if_t<is_char_v<T>, std::nullptr_t> = nullptr>
 std::optional<std::vector<T>> insert_text_chunks(std::vector<T>& img_data,
-												 const std::vector<KV>& kvs,
+												 const std::vector<KV>& kvs, bool utf8 = false,
 												 bool validity_check = true) {
 	if (validity_check && !is_valid_png(img_data)) {
 		throw std::runtime_error("png signature not found");
@@ -251,7 +302,7 @@ std::optional<std::vector<T>> insert_text_chunks(std::vector<T>& img_data,
 		if (name == "IHDR") {
 			skip_content<T>(begin, length);
 			for (auto& [k, v] : kvs) {
-				insert_text_chunk(img_data, begin, k, v);
+				insert_text_chunk(img_data, begin, k, v, utf8);
 				// std::cout << "insert: key: " << k << ", value: " << v << std::endl;
 			}
 			return img_data;
@@ -262,7 +313,7 @@ std::optional<std::vector<T>> insert_text_chunks(std::vector<T>& img_data,
 
 template <typename T, std::enable_if_t<is_char_v<T>, std::nullptr_t> = nullptr>
 std::optional<std::vector<T>> insert_text_chunks(std::ifstream& ifs, const std::vector<KV>& kvs,
-												 bool validity_check = true) {
+												 bool utf8 = false, bool validity_check = true) {
 	if (validity_check && !is_valid_png(ifs)) {
 		throw std::runtime_error("png signature not found");
 	}
@@ -273,7 +324,7 @@ std::optional<std::vector<T>> insert_text_chunks(std::ifstream& ifs, const std::
 	std::vector<T> img_data(img_size);
 	ifs.read(reinterpret_cast<char*>(img_data.data()), img_size);
 	// std::cout << "size = " << img_size << "\n";
-	return insert_text_chunks<T>(img_data, kvs, false);
+	return insert_text_chunks<T>(img_data, kvs, utf8, false);
 }
 
 template <typename T = char, std::enable_if_t<is_char_v<T>, std::nullptr_t> = nullptr>
@@ -303,7 +354,7 @@ std::vector<KV> extract_text_chunks(const std::string& filename, bool validity_c
 	while (!ifs.eof()) {
 		auto [name, length] = read_chunk_name_size(ifs);
 		// std::cout << "chunk: " << name << ", len: " << length << std::endl;
-		if (name == "tEXt") {
+		if (name == "tEXt" || name == "iTXT") {
 			auto [key, value] = read_text_chunk(ifs, length);
 			// std::cout << " - key: " << key << ", value: " << value << std::endl;
 			ret.push_back({std::move(key), std::move(value)});
@@ -328,7 +379,7 @@ std::vector<KV> extract_text_chunks(const std::vector<T>& img, bool validity_che
 	while (begin != img.end()) {
 		auto [name, length] = read_chunk_name_size<T>(begin);
 		// std::cout << "chunk: " << name << ", len: " << length << std::endl;
-		if (name == "tEXt") {
+		if (name == "tEXt" || name == "iTXT") {
 			auto [key, value] = read_text_chunk<T>(begin, length);
 			// std::cout << " - key: " << key << ", value: " << value << std::endl;
 			ret.push_back({std::move(key), std::move(value)});
