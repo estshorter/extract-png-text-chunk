@@ -42,19 +42,14 @@ int main(void) {
 	using namespace png_text_chunk;
 	constexpr auto filename_in = "orbit.png";
 	const std::vector<KV> kvs = {
-		{"original width", "1920"}, {"original height", "1200"}, {"japanese", u8"日本語"}};
+		{"original width", "1920"}, {"original height", "1200"}, {"japanese", u8"にほんご"}};
 
 	auto img_in = read_img_uc(filename_in);
 
 	// auto inserted_opt = insert_text_chunks<char>(filename_in, kvs);
-	auto inserted_opt = insert_text_chunks(img_in, kvs, true);
-	if (!inserted_opt.has_value()) {
-		std::cerr << "failed to insert" << std::endl;
-		return -1;
-	}
-
+	auto inserted = insert_text_chunks(img_in, kvs, true);
 	constexpr auto filename_out = "inserted.png";
-	write_img(filename_out, inserted_opt.value());
+	write_img(filename_out, inserted);
 	auto img_inserted = read_img_c(filename_out);
 	// auto img_inserted = extract_text_chunks(filename_out);
 	auto ret = extract_text_chunks(img_inserted);

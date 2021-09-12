@@ -4,7 +4,6 @@
 #include <array>
 #include <fstream>
 #include <iostream>
-#include <optional>
 #include <string>
 #include <vector>
 
@@ -258,7 +257,7 @@ void insert_text_chunk(std::vector<T>& img, typename std::vector<T>::const_itera
 }
 
 template <typename T, std::enable_if_t<is_char_v<T>, std::nullptr_t> = nullptr>
-std::optional<std::vector<T>> insert_text_chunks(std::vector<T>& img_data,
+std::vector<T> insert_text_chunks(std::vector<T>& img_data,
 												 const std::vector<KV>& kvs, bool utf8 = false,
 												 bool validity_check = true) {
 	if (validity_check && !is_valid_png(img_data)) {
@@ -278,11 +277,11 @@ std::optional<std::vector<T>> insert_text_chunks(std::vector<T>& img_data,
 			return img_data;
 		}
 	}
-	return std::nullopt;
+	throw std::runtime_error("IHDR cannot be found");
 }
 
 template <typename T, std::enable_if_t<is_char_v<T>, std::nullptr_t> = nullptr>
-std::optional<std::vector<T>> insert_text_chunks(std::ifstream& ifs, const std::vector<KV>& kvs,
+std::vector<T> insert_text_chunks(std::ifstream& ifs, const std::vector<KV>& kvs,
 												 bool utf8 = false, bool validity_check = true) {
 	if (validity_check && !is_valid_png(ifs)) {
 		throw std::runtime_error("png signature not found");
@@ -298,7 +297,7 @@ std::optional<std::vector<T>> insert_text_chunks(std::ifstream& ifs, const std::
 }
 
 template <typename T = char, std::enable_if_t<is_char_v<T>, std::nullptr_t> = nullptr>
-inline std::optional<std::vector<T>> insert_text_chunks(const std::string& filename,
+inline std::vector<T> insert_text_chunks(const std::string& filename,
 														const std::vector<KV>& kvs) {
 	std::ifstream ifs;
 	ifs.open(filename, std::ios::out | std::ios::binary);
