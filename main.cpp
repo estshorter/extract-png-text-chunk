@@ -1,5 +1,4 @@
-#include <iostream>
-
+#include "misc.h"
 #include "png_text_chunk.hpp"
 
 std::vector<unsigned char> read_img_uc(const std::string& filename) {
@@ -62,7 +61,7 @@ int main(void) {
 
 	std::cout << "Extracted texts: " << std::endl;
 	for (auto& [key, value] : ret) {
-		std::cout << " - key: " << key << ", value: " << value << std::endl;
+		std::cout << " - key: " << key << ", value: " << misc::utf8_to_locale(value) << std::endl;
 	}
 	return 0;
 }

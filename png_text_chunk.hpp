@@ -149,7 +149,7 @@ inline void skip_content(typename std::vector<T>::const_iterator& begin, std::ui
 }
 
 inline void skip_content(std::ifstream& ifs, std::uint32_t length) {
-	ifs.seekg(length + 4, std::ios_base::cur);
+	ifs.seekg(static_cast<size_t>(length + 4), std::ios_base::cur);
 }
 
 template <typename T, std::enable_if_t<is_char_v<T>, std::nullptr_t> = nullptr>
@@ -248,7 +248,7 @@ std::vector<T> generate_itext_chunk(const std::string& key_ascii, const std::str
 	for (int i = 0; i < 4; i++) {
 		ret.push_back(len[i]);
 	}
-	constexpr std::array<T, 4> itext = {'i', 'T', 'X', 'T'};
+	constexpr std::array<T, 4> itext = {'i', 'T', 'X', 't'};
 
 	std::vector<T> content;
 	content.reserve(length + size_type);
@@ -354,7 +354,7 @@ std::vector<KV> extract_text_chunks(const std::string& filename, bool validity_c
 	while (!ifs.eof()) {
 		auto [name, length] = read_chunk_name_size(ifs);
 		// std::cout << "chunk: " << name << ", len: " << length << std::endl;
-		if (name == "tEXt" || name == "iTXT") {
+		if (name == "tEXt" || name == "iTXt") {
 			auto [key, value] = read_text_chunk(ifs, length);
 			// std::cout << " - key: " << key << ", value: " << value << std::endl;
 			ret.push_back({std::move(key), std::move(value)});
@@ -379,7 +379,7 @@ std::vector<KV> extract_text_chunks(const std::vector<T>& img, bool validity_che
 	while (begin != img.end()) {
 		auto [name, length] = read_chunk_name_size<T>(begin);
 		// std::cout << "chunk: " << name << ", len: " << length << std::endl;
-		if (name == "tEXt" || name == "iTXT") {
+		if (name == "tEXt" || name == "iTXt") {
 			auto [key, value] = read_text_chunk<T>(begin, length);
 			// std::cout << " - key: " << key << ", value: " << value << std::endl;
 			ret.push_back({std::move(key), std::move(value)});
