@@ -8,6 +8,7 @@
 #include <string>
 #include <vector>
 
+#define CRCPP_USE_CPP11
 #include "CRC.h"
 
 namespace png_text_chunk {
