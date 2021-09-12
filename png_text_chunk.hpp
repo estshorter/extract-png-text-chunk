@@ -97,23 +97,24 @@ inline std::string read_string(std::ifstream& ifs, std::uint32_t length) {
 	return text;
 }
 
+// assume uncompressed
 template <typename T, std::enable_if_t<is_char_v<T>, std::nullptr_t> = nullptr>
 inline std::pair<std::string, std::string> read_key_value(
 	typename std::vector<T>::const_iterator& begin, std::uint32_t length) {
 	auto end = begin + length;
 
-	auto delim_first_null = std::find(begin, end, '\0');
+	auto first_null = std::find(begin, end, '\0');
 
 	auto begin_r = std::make_reverse_iterator(begin);
 	auto delim_r = std::find(std::make_reverse_iterator(end), begin_r, '\0');
-	if (delim_r == begin_r || delim_first_null == end) {
+	if (delim_r == begin_r || first_null == end) {
 		throw("null character is not found");
 	}
-	auto delim_last_null = begin + std::distance(delim_r, begin_r);
+	auto last_null = begin + std::distance(delim_r, begin_r);
 
 	std::string key, value;
-	std::copy(begin, delim_first_null, std::back_inserter(key));
-	std::copy(delim_last_null, end, std::back_inserter(value));
+	std::copy(begin, first_null, std::back_inserter(key));
+	std::copy(last_null, end, std::back_inserter(value));
 	begin = end;
 	return {key, value};
 }
