@@ -101,7 +101,9 @@ template <typename T, std::enable_if_t<is_char_v<T>, std::nullptr_t> = nullptr>
 inline std::pair<std::string, std::string> read_key_value(
 	typename std::vector<T>::const_iterator& begin, std::uint32_t length) {
 	auto end = begin + length;
-	auto delim = std::find(begin, end, '\0');
+	auto delim_r =
+		std::find(std::make_reverse_iterator(begin), std::make_reverse_iterator(end), '\0');
+	auto delim = (delim_r + 1).base();
 	if (delim == end) {
 		throw("null character is not found");
 	}
@@ -150,8 +152,9 @@ inline void skip_content(std::ifstream& ifs, std::uint32_t length) {
 template <typename T, std::enable_if_t<is_char_v<T>, std::nullptr_t> = nullptr>
 inline std::pair<std::string, std::string> read_text_chunk(
 	typename std::vector<T>::const_iterator& begin, std::uint32_t length) {
-	// tEXt を含めてCRC計算
-	std::uint32_t crc_calculated = CRC::Calculate(&(*(begin - 4)), length + 4, CRC::CRC_32());
+	constexpr auto size_type = 4;
+	std::uint32_t crc_calculated =
+		CRC::Calculate(&(*(begin - size_type)), length + size_type, CRC::CRC_32());
 	auto [key, value] = read_key_value<T>(begin, length);
 	std::uint32_t crc = swap_endian(begin);
 	if (crc != crc_calculated) {
@@ -164,16 +167,11 @@ inline std::pair<std::string, std::string> read_text_chunk(
 
 inline std::pair<std::string, std::string> read_text_chunk(std::ifstream& ifs,
 														   std::uint32_t length) {
-	constexpr auto size_tEXt = 4;
+	constexpr auto size_type = 4;
 	constexpr auto size_crc = 4;
 
-	std::vector<char> content(length + size_tEXt + size_crc);
-	content[0] = 't';
-	content[1] = 'E';
-	content[2] = 'X';
-	content[3] = 't';
-
-	ifs.read(&content[size_tEXt], content.size() - size_tEXt);
+	std::vector<char> content(length + size_type + size_crc);
+	ifs.read(content.data(), content.size());
 	std::uint32_t crc_calculated =
 		CRC::Calculate(content.data(), content.size() - size_crc, CRC::CRC_32());
 
@@ -185,7 +183,7 @@ inline std::pair<std::string, std::string> read_text_chunk(std::ifstream& ifs,
 								 ", actual: " + std::to_string(crc));
 	}
 
-	auto begin = content.cbegin() + size_tEXt;
+	auto begin = content.cbegin() + size_type;
 	auto [key, value] = read_key_value<char>(begin, length);
 
 	return {key, value};
