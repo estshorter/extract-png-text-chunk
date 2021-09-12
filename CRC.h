@@ -801,7 +801,7 @@ inline CRCType CRC::CalculateRemainder(const void * data, crcpp_size size, const
             }
         }
     }
-    else if (CRCWidth >= CHAR_BIT)
+    else if constexpr (CRCWidth >= CHAR_BIT)
     {
         static crcpp_constexpr CRCType CRC_WIDTH_MINUS_ONE(CRCWidth - CRCType(1));
 #ifndef CRCPP_BRANCHLESS
