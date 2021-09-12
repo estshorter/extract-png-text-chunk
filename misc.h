@@ -13,17 +13,6 @@
 #include <Windows.h>
 #undef NOMINMAX
 #undef WIN32_LEAN_AND_MEAN
-#else
-#if not __has_include(<unicode/unistr.h>)
-#error "This library depends on ICU (International Components for Unicode). Please install it."
-#endif
-// Ubuntu: sudo apt install libicu-dev
-#include <unicode/ucsdet.h>
-#include <unicode/unistr.h>
-
-#include <optional>
-#include <utility>
-#include <vector>
 #endif
 
 namespace misc {
@@ -54,7 +43,7 @@ inline std::wstring to_utf16(UINT enc_src, const std::string& src) {
 }
 
 /// <summary>UTF16からマルチバイト文字（UTF8 or SJIS）に変換する</summary>
-/// <param name="enc_dst">変換先の文字コードを指定する。UTF8: CP_UTF8, 
+/// <param name="enc_dst">変換先の文字コードを指定する。UTF8: CP_UTF8,
 /// locale: CP_THREAD_ACP</param>
 inline std::string to_multibyte(UINT enc_dst, const std::wstring& src) {
 	//変換先の文字列長を求めておいてから変換する
@@ -86,81 +75,6 @@ inline std::string locale_to_utf8(const std::string& src_sjis) {
 inline std::string utf8_to_locale(std::string&& src_utf8) { return std::move(src_utf8); }
 inline std::string utf8_to_locale(const std::string& src_utf8) { return src_utf8; }
 
-// https://unicode-org.github.io/icu/userguide/conversion/converters.html#conversion-examples
-namespace Encoding {
-constexpr auto SJIS = "Shift_JIS";
-constexpr auto UTF8 = "UTF-8";
-}  // namespace Encoding
-
-inline std::string convert_encoding(const std::string& src, const char* enc_src,
-									const char* enc_dst) {
-	// pre-flighting
-	icu::UnicodeString src_icu(src.c_str(), enc_src);
-	int length = src_icu.extract(0, src_icu.length(), NULL, enc_dst);
-	if (length <= 0) {
-		return "";
-	}
-	std::string result(length, 0);
-	src_icu.extract(0, src_icu.length(), &result[0], enc_dst);
-	return result;
-}
-
-inline std::string sjis_to_utf8(const std::string& src_sjis) {
-	return convert_encoding(src_sjis, Encoding::SJIS, Encoding::UTF8);
-}
-
-inline std::string utf8_to_sjis(const std::string& src_utf8) {
-	return convert_encoding(src_utf8, Encoding::UTF8, Encoding::SJIS);
-}
-
-// https://unicode-org.github.io/icu/userguide/conversion/detection.html
-struct CharDetResult {
-	std::string enc;
-	int32_t confidence;
-};
-
-std::optional<CharDetResult> chardet(const std::string& src) {
-	UErrorCode status = U_ZERO_ERROR;
-	UCharsetDetector* csd = ucsdet_open(&status);
-	if (U_FAILURE(status)) return std::nullopt;
-	ucsdet_setText(csd, src.c_str(), src.size(), &status);
-	if (U_FAILURE(status)) return std::nullopt;
-	const UCharsetMatch* ucm = ucsdet_detect(csd, &status);
-	if (U_FAILURE(status)) return std::nullopt;
-	std::string name(ucsdet_getName(ucm, &status));
-	if (U_FAILURE(status)) return std::nullopt;
-	auto confidence = ucsdet_getConfidence(ucm, &status);
-	if (U_FAILURE(status)) return std::nullopt;
-	return CharDetResult{name, confidence};
-}
-
-std::optional<std::vector<CharDetResult> > chardet_all(const std::string& src,
-													   int32_t threshold = 50) {
-	UErrorCode status = U_ZERO_ERROR;
-	UCharsetDetector* csd = ucsdet_open(&status);
-	if (U_FAILURE(status)) return std::nullopt;
-	ucsdet_setText(csd, src.c_str(), src.size(), &status);
-	if (U_FAILURE(status)) return std::nullopt;
-
-	std::vector<CharDetResult> results;
-	int32_t matchesFound = 0;
-	const UCharsetMatch** ucm = ucsdet_detectAll(csd, &matchesFound, &status);
-	if (U_FAILURE(status)) return std::nullopt;
-
-	for (int i = 0; i < matchesFound; i++) {
-		const UCharsetMatch* matched = ucm[i];
-		auto confidence = ucsdet_getConfidence(matched, &status);
-		if (U_FAILURE(status)) return std::nullopt;
-
-		if (confidence < threshold) {
-			break;
-		}
-		std::string name(ucsdet_getName(matched, &status));
-		if (U_FAILURE(status)) return std::nullopt;
-		results.push_back({name, confidence});
-	}
-	return results;
-}
 #endif
 
 // https://stackoverflow.com/questions/37591361/how-to-write-unicode-string-to-file-with-utf-8-bom-by-c
