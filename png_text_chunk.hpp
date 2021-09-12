@@ -193,7 +193,8 @@ inline std::pair<std::string, std::string> read_text_chunk(std::ifstream& ifs,
 }
 
 template <typename T, std::enable_if_t<is_char_v<T>, std::nullptr_t> = nullptr>
-std::vector<T> generate_text_chunk(const std::string& key_ascii, const std::string& val_ascii) {
+std::vector<T> generate_text_chunk(const std::string& key_ascii, const std::string& val_ascii,
+								   bool utf8 = false) {
 	constexpr auto size_length = 4;
 	constexpr auto size_type = 4;
 	constexpr auto size_crc = 4;
@@ -202,6 +203,9 @@ std::vector<T> generate_text_chunk(const std::string& key_ascii, const std::stri
 		throw std::runtime_error("key size must be within 1~79");
 	}
 	std::uint32_t length = static_cast<uint32_t>(key_ascii.size() + 1 + val_ascii.size());
+	if (utf8) {
+		length += 4;
+	}
 	std::uint32_t length_swapped = swap_endian(length);
 
 	std::vector<T> ret;
@@ -210,55 +214,25 @@ std::vector<T> generate_text_chunk(const std::string& key_ascii, const std::stri
 	for (int i = 0; i < 4; i++) {
 		ret.push_back(len[i]);
 	}
-	constexpr std::array<T, 4> itext = {'t', 'E', 'X', 't'};
+	constexpr std::array<T, 4> type_text = {'t', 'E', 'X', 't'};
+	constexpr std::array<T, 4> type_itext = {'i', 'T', 'X', 't'};
 
 	std::vector<T> content;
 	content.reserve(length + size_type);
-	std::move(itext.begin(), itext.end(), std::back_inserter(content));
+	if (utf8) {
+		std::move(type_itext.begin(), type_itext.end(), std::back_inserter(content));
+
+	} else {
+		std::move(type_text.begin(), type_text.end(), std::back_inserter(content));
+	}
 	std::copy(key_ascii.begin(), key_ascii.end(), std::back_inserter(content));
-	content.push_back('\0');
-	std::copy(val_ascii.begin(), val_ascii.end(), std::back_inserter(content));
-
-	std::uint32_t crc = CRC::Calculate(content.data(), content.size(), CRC::CRC_32());
-	std::uint32_t crc_swapped = swap_endian(crc);
-	T* crc_ = reinterpret_cast<T*>(&crc_swapped);
-	std::move(content.begin(), content.end(), std::back_inserter(ret));
-	for (int i = 0; i < 4; i++) {
-		ret.push_back(crc_[i]);
+	content.push_back('\0'); // sep
+	if (utf8) {
+		content.push_back('\0'); // compresion flag 
+		content.push_back('\0'); // compresson type
+		content.push_back('\0'); // sep
+		content.push_back('\0'); // sep
 	}
-	return ret;
-}
-
-template <typename T, std::enable_if_t<is_char_v<T>, std::nullptr_t> = nullptr>
-std::vector<T> generate_itext_chunk(const std::string& key_ascii, const std::string& val_ascii) {
-	constexpr auto size_length = 4;
-	constexpr auto size_type = 4;
-	constexpr auto size_crc = 4;
-
-	if (key_ascii.size() == 0 || key_ascii.size() >= 80) {
-		throw std::runtime_error("key size must be within 1~79");
-	}
-	// Uncompressed, no-lang tag, no-trans tag
-	std::uint32_t length = static_cast<uint32_t>(key_ascii.size() + 5 + val_ascii.size());
-	std::uint32_t length_swapped = swap_endian(length);
-
-	std::vector<T> ret;
-	ret.reserve(length + size_length + size_type + size_crc);
-	T* len = reinterpret_cast<T*>(&length_swapped);
-	for (int i = 0; i < 4; i++) {
-		ret.push_back(len[i]);
-	}
-	constexpr std::array<T, 4> itext = {'i', 'T', 'X', 't'};
-
-	std::vector<T> content;
-	content.reserve(length + size_type);
-	std::move(itext.begin(), itext.end(), std::back_inserter(content));
-	std::copy(key_ascii.begin(), key_ascii.end(), std::back_inserter(content));
-	content.push_back('\0');
-	content.push_back('\0');
-	content.push_back('\0');
-	content.push_back('\0');
-	content.push_back('\0');
 	std::copy(val_ascii.begin(), val_ascii.end(), std::back_inserter(content));
 
 	std::uint32_t crc = CRC::Calculate(content.data(), content.size(), CRC::CRC_32());
@@ -275,12 +249,7 @@ template <typename T, std::enable_if_t<is_char_v<T>, std::nullptr_t> = nullptr>
 void insert_text_chunk(std::vector<T>& img, typename std::vector<T>::const_iterator& begin,
 					   const std::string& key_ascii, const std::string& val_ascii,
 					   bool utf8 = false) {
-	std::vector<T> text;
-	if (utf8) {
-		text = generate_itext_chunk<T>(key_ascii, val_ascii);
-	} else {
-		text = generate_text_chunk<T>(key_ascii, val_ascii);
-	}
+	auto text = generate_text_chunk<T>(key_ascii, val_ascii, utf8);
 	auto size = text.size();
 	begin = img.insert(begin, std::make_move_iterator(text.begin()),
 					   std::make_move_iterator(text.end()));
