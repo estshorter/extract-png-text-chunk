@@ -30,14 +30,14 @@ inline std::uint32_t swap_endian(std::uint32_t data) {
 }
 
 template <class Iter>
-inline std::uint32_t swap_endian(Iter begin) {
+std::uint32_t swap_endian(Iter begin) {
 	return (static_cast<unsigned char>(*(begin + 3))) |
 		   ((static_cast<unsigned char>(*(begin + 2)) << 8) & 0xff00) |
 		   ((static_cast<unsigned char>(*(begin + 1)) << 16) & 0xff0000) |
 		   ((static_cast<unsigned char>(*(begin)) << 24) & 0xff000000);
 }
 
-bool is_valid_png(std::ifstream& ifs) {
+inline bool is_valid_png(std::ifstream& ifs) {
 	constexpr auto PNG_SIG = "\x89PNG\r\n\x1a\n";
 	std::array<char, sizeof(PNG_SIG)> sig{};
 
@@ -64,7 +64,7 @@ bool is_valid_png(const std::vector<T>& img) {
 }
 
 template <typename T, std::enable_if_t<is_char_v<T>, std::nullptr_t> = nullptr>
-inline std::uint32_t read_size(typename std::vector<T>::const_iterator& begin) {
+std::uint32_t read_size(typename std::vector<T>::const_iterator& begin) {
 	auto length = swap_endian(begin);
 
 	begin += 4;
@@ -80,7 +80,7 @@ inline std::uint32_t read_size(std::ifstream& ifs) {
 }
 
 template <typename T, std::enable_if_t<is_char_v<T>, std::nullptr_t> = nullptr>
-inline std::string read_string(typename std::vector<T>::const_iterator& begin,
+std::string read_string(typename std::vector<T>::const_iterator& begin,
 							   std::uint32_t length) {
 	auto end = begin + length;
 	std::string text;
@@ -98,7 +98,7 @@ inline std::string read_string(std::ifstream& ifs, std::uint32_t length) {
 
 // assume uncompressed
 template <typename T, std::enable_if_t<is_char_v<T>, std::nullptr_t> = nullptr>
-inline std::pair<std::string, std::string> read_key_value(
+std::pair<std::string, std::string> read_key_value(
 	typename std::vector<T>::const_iterator& begin, std::uint32_t length) {
 	auto end = begin + length;
 
@@ -119,7 +119,7 @@ inline std::pair<std::string, std::string> read_key_value(
 }
 
 template <typename T, std::enable_if_t<is_char_v<T>, std::nullptr_t> = nullptr>
-inline std::string read_chunk_name(typename std::vector<T>::const_iterator& begin) {
+std::string read_chunk_name(typename std::vector<T>::const_iterator& begin) {
 	auto ret = read_string<T>(begin, 4);
 	return ret;
 }
@@ -130,7 +130,7 @@ inline std::string read_chunk_name(std::ifstream& ifs) {
 }
 
 template <typename T>
-inline std::pair<std::string, std::uint32_t> read_chunk_name_size(
+std::pair<std::string, std::uint32_t> read_chunk_name_size(
 	typename std::vector<T>::const_iterator& begin) {
 	auto length = read_size<T>(begin);
 	auto name = read_chunk_name<T>(begin);
@@ -144,7 +144,7 @@ inline std::pair<std::string, std::uint32_t> read_chunk_name_size(std::ifstream&
 }
 
 template <typename T, std::enable_if_t<is_char_v<T>, std::nullptr_t> = nullptr>
-inline void skip_content(typename std::vector<T>::const_iterator& begin, std::uint32_t length) {
+void skip_content(typename std::vector<T>::const_iterator& begin, std::uint32_t length) {
 	begin += length + 4;
 }
 
@@ -153,7 +153,7 @@ inline void skip_content(std::ifstream& ifs, std::uint32_t length) {
 }
 
 template <typename T, std::enable_if_t<is_char_v<T>, std::nullptr_t> = nullptr>
-inline std::pair<std::string, std::string> read_text_chunk(
+std::pair<std::string, std::string> read_text_chunk(
 	typename std::vector<T>::const_iterator& begin, std::uint32_t length) {
 	constexpr auto size_type = 4;
 	std::uint32_t crc_calculated =
@@ -297,7 +297,7 @@ std::vector<T> insert_text_chunks(std::ifstream& ifs, const std::vector<KV>& kvs
 }
 
 template <typename T = char, std::enable_if_t<is_char_v<T>, std::nullptr_t> = nullptr>
-inline std::vector<T> insert_text_chunks(const std::string& filename,
+std::vector<T> insert_text_chunks(const std::string& filename,
 														const std::vector<KV>& kvs) {
 	std::ifstream ifs;
 	ifs.open(filename, std::ios::out | std::ios::binary);
