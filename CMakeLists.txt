@@ -9,6 +9,6 @@ target_compile_options(png_text_chunk PRIVATE
     $<$<CXX_COMPILER_ID:MSVC>:/W4 /source-charset:utf-8 /Zc:__cplusplus /Zc:preprocessor>
 )
 target_compile_features(png_text_chunk PRIVATE cxx_std_17)
-
+set_property(DIRECTORY PROPERTY VS_STARTUP_PROJECT "png_text_chunk")
 set(resources ${CMAKE_CURRENT_LIST_DIR}/orbit.png)
 add_custom_command(TARGET png_text_chunk POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy ${resources} $<TARGET_FILE_DIR:png_text_chunk>)
